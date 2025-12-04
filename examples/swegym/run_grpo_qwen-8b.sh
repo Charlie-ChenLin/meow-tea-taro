@@ -76,7 +76,7 @@ save_freq=40 # per steps
 test_freq=5 # per steps
 
 # PROJECT CONFIG
-project_name="Multi-turn RL" # TODO (optional). WandB project name.
+project_name="multi_turn_rl" # Avoid spaces to satisfy Hydra parsing
 experiment_name="meow" # TODO (optional). WandB experiment name.
 save_hf_repo_id="meow-swe-qwen2.5-3b-instruct" # TODO (optional). HF repo id to save the trained model. If empty, do not save.
 resume_wandb_logs=True # TODO (optional, default=True). Whether to resume WandB logs if "experiment_name" exists.
