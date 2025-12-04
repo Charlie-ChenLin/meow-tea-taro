@@ -5,6 +5,10 @@
 
 set -x
 export HYDRA_FULL_ERROR=1
+export WANDB_MODE="offline"
+export VLLM_USE_FLASH_ATTN=1      # 发现 flash-attn 时强制启用
+export VLLM_USE_FLASHINFER=1      # 发现 flashinfer 时强制启用（vLLM >=0.8.x 支持）
+
 
 # DATA/TASK CONFIG
 env_name="swegym"
@@ -16,14 +20,15 @@ env_name="swegym"
 # hf_train_data_dir="textworld/w2-o3-q4/multiturn_rl_data/1000_train_data"
 # local_instances_dir="local/$hf_instances_dir"
 # local_train_data_dir="local/$hf_train_data_dir"
-local_parquet_dir="local/train_parquet"
+local_parquet_dir="data/meow-tea-taro-dataset/swegym/basic_tasks"
 reward_method="single"
 
 # MODEL CONFIG
 hf_actor_repo_id=""
 hf_actor_model_path=""
 actor_model_path=local/model/actor
-base_model="Qwen/Qwen2.5-1.5B-Instruct"
+# base_model="Qwen/Qwen2.5-1.5B-Instruct"
+base_model="/mnt/shared-storage-user/formalverification-shared/openai-community/Qwen/Qwen2.5-3B-Instruct"
 
 # AGENTIC CONFIG
 # env_name=... # from above
@@ -51,7 +56,9 @@ val_rollout_temp=0.4
 train_batch_size=8
 ppo_mini_batch_size=8
 max_num_batched_tokens=8192
-gpu_memory_utilization=0.5
+# gpu_memory_utilization=0.5
+gpu_memory_utilization=0.8
+
 max_prompt_length=4096
 max_response_length=4096
 actor_lr=1e-6
