@@ -8,6 +8,7 @@ export HYDRA_FULL_ERROR=1
 export WANDB_MODE="offline"
 export VLLM_USE_FLASH_ATTN=1      # 发现 flash-attn 时强制启用
 export VLLM_USE_FLASHINFER=1      # 发现 flashinfer 时强制启用（vLLM >=0.8.x 支持）
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 
 # DATA/TASK CONFIG
@@ -29,6 +30,13 @@ hf_actor_model_path=""
 actor_model_path=local/model/actor
 # base_model="Qwen/Qwen2.5-1.5B-Instruct"
 base_model="/mnt/shared-storage-user/formalverification-shared/openai-community/Qwen/Qwen2.5-3B-Instruct"
+agent_loop_config_path="$REPO_ROOT/examples/swegym/agent_loop_configs.yaml"
+sweagent_config_path="${SWEAGENT_CONFIG_PATH:-$REPO_ROOT/local/sweagent_config.yaml}"
+
+# 如果本地没有覆盖配置，则回退到仓库内置的 swegym 配置
+if [ ! -f "$sweagent_config_path" ]; then
+    sweagent_config_path="$REPO_ROOT/meow_tea_gym/SWE-agent/config/swegym.yaml"
+fi
 
 # AGENTIC CONFIG
 # env_name=... # from above
@@ -68,9 +76,9 @@ save_freq=40 # per steps
 test_freq=5 # per steps
 
 # PROJECT CONFIG
-project_name="" # TODO (optional). WandB project name.
-experiment_name="" # TODO (optional). WandB experiment name.
-save_hf_repo_id="your-hf-repo-id" # TODO (optional). HF repo id to save the trained model. If empty, do not save.
+project_name="Multi-turn RL" # TODO (optional). WandB project name.
+experiment_name="meow" # TODO (optional). WandB experiment name.
+save_hf_repo_id="meow-swe-qwen2.5-3b-instruct" # TODO (optional). HF repo id to save the trained model. If empty, do not save.
 resume_wandb_logs=True # TODO (optional, default=True). Whether to resume WandB logs if "experiment_name" exists.
 
 
@@ -148,7 +156,7 @@ python3 -m meow_tea_train.verl.trainer.main_ppo \
     agentic.reward.type=$reward_type \
     agentic.agent_loop.type="async_software" \
     +agentic.agent_loop.kwargs.trajs_save_dir="local/trajectories" \
-    +agentic.agent_loop.kwargs.sweagent_config_path="local/sweagent_config.yaml" \
+    +agentic.agent_loop.kwargs.sweagent_config_path="$sweagent_config_path" \
     actor_rollout_ref.model.path=$actor_model_path \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
@@ -166,7 +174,7 @@ python3 -m meow_tea_train.verl.trainer.main_ppo \
     +actor_rollout_ref.rollout.agentic='${agentic}' \
     actor_rollout_ref.rollout.agent.num_workers=4 \
     actor_rollout_ref.rollout.agent.default_agent_loop="swe_agent" \
-    actor_rollout_ref.rollout.agent.agent_loop_config_path="agent_loop_configs.yaml" \
+    actor_rollout_ref.rollout.agent.agent_loop_config_path="$agent_loop_config_path" \
     actor_rollout_ref.rollout.temperature=$rollout_temp \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.gpu_memory_utilization=$gpu_memory_utilization \
