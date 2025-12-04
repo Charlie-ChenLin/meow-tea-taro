@@ -8,6 +8,7 @@ export HYDRA_FULL_ERROR=1
 export WANDB_MODE="offline"
 export VLLM_USE_FLASH_ATTN=1      # 发现 flash-attn 时强制启用
 export VLLM_USE_FLASHINFER=1      # 发现 flashinfer 时强制启用（vLLM >=0.8.x 支持）
+export SWEAGENT_CONFIG_PATH=/mnt/shared-storage-user/chenlin1/meow-tea-taro/meow_tea_gym/SWE-agent/config/swegym.yaml
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 
@@ -191,7 +192,7 @@ python3 -m meow_tea_train.verl.trainer.main_ppo \
     trainer.default_local_dir="$checkpoint_dir" \
     trainer.validation_data_dir="local/val_results" \
     trainer.nnodes=$nnodes \
-    trainer.n_gpus_per_node=8 \
+    trainer.n_gpus_per_node=4 \
     trainer.val_before_train=True \
     trainer.hf_kwargs.save_hf_repo_id=$save_hf_repo_id \
     trainer.hf_kwargs.resume_wandb_logs=$resume_wandb_logs \
