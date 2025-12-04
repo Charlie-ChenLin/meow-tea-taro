@@ -8,6 +8,7 @@ export HYDRA_FULL_ERROR=1
 export WANDB_MODE="offline"
 export VLLM_USE_FLASH_ATTN=1      # 发现 flash-attn 时强制启用
 export VLLM_USE_FLASHINFER=1      # 发现 flashinfer 时强制启用（vLLM >=0.8.x 支持）
+export SWEAGENT_USE_HOST_ENV=1    # 复用当前环境，跳过内部 conda 创建
 export SWEAGENT_CONFIG_PATH=/mnt/shared-storage-user/chenlin1/meow-tea-taro/meow_tea_gym/SWE-agent/config/swegym.yaml
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
@@ -33,11 +34,14 @@ actor_model_path=local/model/actor
 base_model="/mnt/shared-storage-user/formalverification-shared/openai-community/Qwen/Qwen2.5-3B-Instruct"
 agent_loop_config_path="$REPO_ROOT/examples/swegym/agent_loop_configs.yaml"
 sweagent_config_path="${SWEAGENT_CONFIG_PATH:-$REPO_ROOT/local/sweagent_config.yaml}"
+sweagent_work_root="${SWEAGENT_WORK_ROOT:-$REPO_ROOT/local/swe_work_root}"
 
-# 如果本地没有覆盖配置，则回退到仓库内置的 swegym 配置
+# 如果本地没有覆盖配置，则回退到仓库内置的 swegym 配置，并确保路径存在
 if [ ! -f "$sweagent_config_path" ]; then
-    sweagent_config_path="$REPO_ROOT/meow_tea_gym/SWE-agent/config/swegym.yaml"
+    mkdir -p "$(dirname "$sweagent_config_path")"
+    cp "$REPO_ROOT/meow_tea_gym/SWE-agent/config/swegym.yaml" "$sweagent_config_path"
 fi
+mkdir -p "$sweagent_work_root"
 
 # AGENTIC CONFIG
 # env_name=... # from above
@@ -160,6 +164,7 @@ python3 -m meow_tea_train.verl.trainer.main_ppo \
     agentic.agent_loop.type="async_software" \
     +agentic.agent_loop.kwargs.trajs_save_dir="local/trajectories" \
     +agentic.agent_loop.kwargs.sweagent_config_path="$sweagent_config_path" \
+    +agentic.agent_loop.kwargs.sweagent_work_root="$sweagent_work_root" \
     actor_rollout_ref.model.path=$actor_model_path \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \

@@ -9,6 +9,7 @@ import json
 import yaml
 import logging
 import time
+import sys
 
 from sweagent.environment.swe_env import SWEEnv
 from sweagent.run.common import save_predictions
@@ -53,6 +54,7 @@ def sweagent_run_remote(
     global_step: int = 0,
     training_phase: str = "train",
     repetition_id: int = 0,
+    sweagent_work_root: Optional[str] = None,
     **kwargs
 ) -> tuple[list[dict[str, str]], float, Optional[str]]:
     """
@@ -109,10 +111,20 @@ def sweagent_run_remote(
     output_dir = global_path / f"{instance_id}_{repetition_id}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Point SWE-agent at the UNIQUE runtime root
-    batch_instance.env.deployment.instance_root = str(runtime_root)
-    # Also set conda root inside runtime (for conda env management)
-    batch_instance.env.deployment.conda_root = str(runtime_root / ".conda")
+    # Point SWE-agent at the runtime root
+    if sweagent_work_root:
+        # Force use of host/local deployment to avoid nested conda env creation
+        try:
+            deployment = batch_instance.env.deployment
+            deployment.type = "local"
+            deployment.work_root = sweagent_work_root
+        except Exception:
+            # Fallback: at least ensure there is a workspace path
+            batch_instance.env.deployment = type("HostDeployment", (), {"type": "local", "work_root": sweagent_work_root})()
+    else:
+        batch_instance.env.deployment.instance_root = str(runtime_root)
+        # Also set conda root inside runtime (for conda env management)
+        batch_instance.env.deployment.conda_root = str(runtime_root / ".conda")
 
     agent = None
     env = None
@@ -251,11 +263,21 @@ class SWEAgentLoop(AgentLoopBase):
         # Load SWE-agent configuration
         sweagent_config_path = kwargs.get("sweagent_config_path")
         if not sweagent_config_path:
-            raise ValueError("sweagent_config_path must be specified in agent_loop_configs.yaml")
-        
+            # fallback to env var or bundled config
+            sweagent_config_path = os.getenv(
+                "SWEAGENT_CONFIG_PATH",
+                str(Path(__file__).resolve().parents[3] / "meow_tea_gym/SWE-agent/config/swegym.yaml"),
+            )
+        sweagent_config_path = os.path.expandvars(os.path.expanduser(str(sweagent_config_path)))
+        if not Path(sweagent_config_path).exists():
+            # last resort: bundled config
+            bundled = Path(__file__).resolve().parents[3] / "meow_tea_gym/SWE-agent/config/swegym.yaml"
+            sweagent_config_path = str(bundled)
+
         logger.info(f"Loading SWE-agent config from: {sweagent_config_path}")
         with open(sweagent_config_path, 'r') as f:
             cls.sweagent_config = yaml.safe_load(f)
+        cls.sweagent_work_root = kwargs.get("sweagent_work_root")
 
         # Agent Loop parameters
         cls.response_length = config.actor_rollout_ref.rollout.response_length
@@ -339,6 +361,7 @@ class SWEAgentLoop(AgentLoopBase):
             global_step=global_step,
             training_phase=training_phase,
             repetition_id=repetition_id,
+            sweagent_work_root=self.sweagent_work_root,
         )
 
         if not messages or error:
