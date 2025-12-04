@@ -211,3 +211,5 @@ local/
 checkpoints/
 wandb/
 outputs/
+
+*.whl
