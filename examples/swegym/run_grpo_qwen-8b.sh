@@ -80,6 +80,8 @@ project_name="Multi-turn RL" # TODO (optional). WandB project name.
 experiment_name="meow" # TODO (optional). WandB experiment name.
 save_hf_repo_id="meow-swe-qwen2.5-3b-instruct" # TODO (optional). HF repo id to save the trained model. If empty, do not save.
 resume_wandb_logs=True # TODO (optional, default=True). Whether to resume WandB logs if "experiment_name" exists.
+checkpoint_dir="/mnt/shared-storage-user/formalverification-shared/chenlin1/verl/ckpts/meow/swe"
+mkdir -p "$checkpoint_dir"
 
 
 # Step 1: Process RL data
@@ -186,6 +188,7 @@ python3 -m meow_tea_train.verl.trainer.main_ppo \
     trainer.logger=['console','wandb'] \
     trainer.project_name=$project_name \
     trainer.experiment_name=$experiment_name \
+    trainer.default_local_dir="$checkpoint_dir" \
     trainer.validation_data_dir="local/val_results" \
     trainer.nnodes=$nnodes \
     trainer.n_gpus_per_node=8 \
