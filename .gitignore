@@ -213,3 +213,4 @@ wandb/
 outputs/
 
 *.whl
+data/
