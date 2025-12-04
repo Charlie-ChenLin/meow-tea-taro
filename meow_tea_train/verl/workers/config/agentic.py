@@ -64,6 +64,7 @@ class SWEAgentKwargs:
     """Configuration for SWE-agent specific parameters"""
     trajs_save_dir: Optional[str] = None
     sweagent_config_path: Optional[str] = None
+    sweagent_work_root: Optional[str] = None
 
 
 @dataclass
