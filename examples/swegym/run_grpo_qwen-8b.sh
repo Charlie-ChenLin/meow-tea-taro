@@ -82,7 +82,7 @@ test_freq=5 # per steps
 
 # PROJECT CONFIG
 project_name="multi_turn_rl" # Avoid spaces to satisfy Hydra parsing
-experiment_name="meow" # TODO (optional). WandB experiment name.
+experiment_name="meow-swe-qwen2.5-3b-instruct" # TODO (optional). WandB experiment name.
 save_hf_repo_id="meow-swe-qwen2.5-3b-instruct" # TODO (optional). HF repo id to save the trained model. If empty, do not save.
 resume_wandb_logs=True # TODO (optional, default=True). Whether to resume WandB logs if "experiment_name" exists.
 checkpoint_dir="/mnt/shared-storage-user/formalverification-shared/chenlin1/verl/ckpts/meow/swe"

@@ -1,5 +1,8 @@
 set -x
 export HYDRA_FULL_ERROR=1
+export WANDB_MODE="offline"
+export VLLM_USE_FLASH_ATTN=1      # 发现 flash-attn 时强制启用
+export VLLM_USE_FLASHINFER=1      # 发现 flashinfer 时强制启用（vLLM >=0.8.x 支持）
 
 # DATA/TASK CONFIG
 env_name="alfworld"
@@ -9,19 +12,36 @@ instance_id_end=3553
 hf_data_repo="PEARLS-Lab/meow-tea-taro-dataset"
 hf_instances_dir="$env_name/$task_prefix/instances"
 hf_train_data_dir="$env_name/$task_prefix/multiturn_rl_data/all_data"
-local_instances_dir="local/$hf_instances_dir"
-local_train_data_dir="local/$hf_train_data_dir"
 local_parquet_dir="local/train_parquet"
-reward_method="dense"
+reward_method="single"
+use_local_data=true                           # Set true to use pre-downloaded data instead of HF.
+local_data_root="data/meow-tea-taro-dataset"  # Base path containing alfworld/text_based/...
+
+# Resolve data paths based on source
+if [ "$use_local_data" = "true" ]; then
+    local_instances_dir="$local_data_root/$hf_instances_dir"
+    local_train_data_dir="$local_data_root/$hf_train_data_dir"
+    skip_hf_download_arg="--skip_hf_download"
+else
+    local_instances_dir="local/$hf_instances_dir"
+    local_train_data_dir="local/$hf_train_data_dir"
+    skip_hf_download_arg=""
+fi
 
 # MODEL CONFIG
-hf_actor_repo_id="Pamela153/SFT-Qwen7B-alfworld-100-data"
-hf_actor_model_path="global_step_76"
-hf_critic_repo_id="Pamela153/SFT-Qwen7B-alfworld-100-data"
-hf_critic_model_path="global_step_76"
-actor_model_path=local/model/actor
-critic_model_path=local/model/critic
-base_model="Qwen/Qwen2.5-7B-Instruct"
+# hf_actor_repo_id="Pamela153/SFT-Qwen7B-alfworld-100-data"
+# hf_actor_model_path="global_step_76"
+# hf_critic_repo_id="Pamela153/SFT-Qwen7B-alfworld-100-data"
+# hf_critic_model_path="global_step_76"
+# actor_model_path=local/model/actor
+# critic_model_path=local/model/critic
+hf_actor_repo_id=""
+hf_actor_model_path=""
+hf_critic_repo_id=""
+hf_critic_model_path=""
+actor_model_path=""
+critic_model_path=""
+base_model="/mnt/shared-storage-user/formalverification-shared/openai-community/Qwen/Qwen2.5-3B-Instruct"
 
 # AGENTIC CONFIG
 # env_name=... # from above
@@ -60,14 +80,14 @@ save_freq=40 # per steps
 test_freq=5 # per steps
 
 # PROJECT CONFIG
-project_name="" # TODO (optional). WandB project name.
-experiment_name="" # TODO (optional). WandB experiment name.
+project_name="multi_turn_rl" # TODO (optional). WandB project name.
+experiment_name="meow-alfworld-qwen2.5-3b-instruct"  # TODO (optional). WandB experiment name.
 save_hf_repo_id="your-hf-repo-id" # TODO (optional). HF repo id to save the trained model. If empty, do not save.
 resume_wandb_logs=True # TODO (optional, default=True). Whether to resume WandB logs if "experiment_name" exists.
 
 
 # Step 1: Process RL data
-echo "Processing multiturn RL data for tasks ${env_name}-${task_prefix} ${task_id_start}-${task_id_end}"
+echo "Processing multiturn RL data for tasks ${env_name}-${task_prefix} ${instance_id_start}-${instance_id_end}"
 python3 -m meow_tea_train.agentic_utils.data_process.rl_data_processor \
     --env_name "$env_name" \
     --task_prefix "$task_prefix" \
@@ -78,7 +98,8 @@ python3 -m meow_tea_train.agentic_utils.data_process.rl_data_processor \
     --local_instances_dir "$local_instances_dir" \
     --local_train_data_dir "$local_train_data_dir" \
     --local_parquet_dir "$local_parquet_dir" \
-    --reward_method "$reward_method"
+    --reward_method "$reward_method" \
+    $skip_hf_download_arg
 
 # Step 2: Load models
 echo "Loading models..."

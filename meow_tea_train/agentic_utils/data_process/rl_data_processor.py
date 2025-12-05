@@ -95,7 +95,7 @@ def main():
     parser.add_argument("--env_name", type=str, required=True)
     parser.add_argument("--task_prefix", type=str, required=True)
     parser.add_argument("--instance_id_range", type=int, nargs=2, required=True, metavar=("START", "END"), help="Instance ID range [start, end], inclusive.")
-    parser.add_argument("--hf_data_repo", type=str, required=True)
+    parser.add_argument("--hf_data_repo", type=str, default="", help="HF repo id. Leave empty if --skip_hf_download.")
     parser.add_argument("--hf_instances_dir", type=str, default="instances")
     parser.add_argument("--hf_train_data_dir", type=str, default="multiturn_rl_data")
     parser.add_argument("--local_instances_dir", type=str, default="local/instances")
@@ -103,15 +103,28 @@ def main():
     parser.add_argument("--local_parquet_dir", type=str, default="local/train_parquet")
     parser.add_argument("--reward_method", type=str, default="single", 
                        choices=["dense", "single"])
+    parser.add_argument("--skip_hf_download", action="store_true",
+                        help="Skip downloading from HF and use existing local data/instances.")
 
     args = parser.parse_args()
     
     # Create dataset ID
     dataset_id = f"{args.task_prefix}_{args.instance_id_range[0]}-{args.instance_id_range[1]}"
     
-    # Step 1: Download data
-    download_from_hf(args.hf_data_repo, "local", args.hf_instances_dir, "dataset")
-    download_from_hf(args.hf_data_repo, "local", args.hf_train_data_dir, "dataset")
+    # Step 1: Download data (unless using local paths)
+    if not args.skip_hf_download:
+        if not args.hf_data_repo:
+            raise ValueError("hf_data_repo is required unless --skip_hf_download is set.")
+        download_from_hf(args.hf_data_repo, "local", args.hf_instances_dir, "dataset")
+        download_from_hf(args.hf_data_repo, "local", args.hf_train_data_dir, "dataset")
+    else:
+        print("Skipping HuggingFace download. Using local paths:")
+        print(f"  Instances dir: {args.local_instances_dir}")
+        print(f"  Train data dir: {args.local_train_data_dir}")
+        if not os.path.exists(args.local_train_data_dir):
+            raise FileNotFoundError(f"Local train data dir not found: {args.local_train_data_dir}")
+        if not os.path.exists(args.local_instances_dir):
+            print(f"Warning: local instances dir not found: {args.local_instances_dir}")
 
     # Step 2: Extract instance files (MUST be before processing RL data)
     extract_instances_files(args.local_instances_dir)
