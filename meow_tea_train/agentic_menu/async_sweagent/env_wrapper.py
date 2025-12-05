@@ -7,7 +7,7 @@ from shutil import rmtree
 
 from sweagent.run.batch_instances import BatchInstance
 from sweagent.environment.swe_env import EnvironmentConfig
-from sweagent.environment.repo import GithubRepoConfig
+from sweagent.environment.repo import GithubRepoConfig, LocalRepoConfig
 from sweagent.environment.conda import CondaDeploymentConfig
 from sweagent.agent.problem_statement import TextProblemStatement
 
@@ -30,7 +30,18 @@ def batch_instance_from_dict(
     base_commit = str(d.get("base_commit", "HEAD"))
     repo = str(d.get("repo", ""))
     github_url = f"https://github.com/{repo}"
-    repo_cfg = GithubRepoConfig(github_url=github_url, base_commit=base_commit)
+
+    # Prefer local mirror if provided to avoid network clones
+    repo_cfg: GithubRepoConfig | LocalRepoConfig
+    local_repo_root = os.getenv("SWEAGENT_LOCAL_REPO_ROOT")
+    if local_repo_root:
+        candidate = Path(local_repo_root) / repo
+        if candidate.exists():
+            repo_cfg = LocalRepoConfig(path=candidate, base_commit=base_commit)
+        else:
+            repo_cfg = GithubRepoConfig(github_url=github_url, base_commit=base_commit)
+    else:
+        repo_cfg = GithubRepoConfig(github_url=github_url, base_commit=base_commit)
     
     if deployment_cfg is None:
         deployment_cfg = CondaDeploymentConfig() # default python=3.11
